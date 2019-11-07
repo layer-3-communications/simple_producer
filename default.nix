@@ -30,5 +30,16 @@ stdenv.mkDerivation rec {
     connect() {
       nc -uU $1
     }
+
+    echo_lines() {
+      while IFS="" read -r p || [ -n "$p" ]
+      do
+        printf '%s\n' "$p"
+      done < test/mobey_dick.txt
+    }
+
+    test() {
+      echo_lines | nc -uU my_socket_path
+    }
   '';
 }
