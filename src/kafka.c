@@ -18,7 +18,7 @@ void callback(rd_kafka_t *rk, const rd_kafka_message_t *rkmessage, void *opaque)
 
 /* establishes our connection to kafka */
 rd_kafka_t *init_kafka(char *broker, uint16_t err_buf_size) {
-  /* producer connection */
+  /* tcp connection to kafka */
   rd_kafka_t *rk;
   /* temporary kafka configuration object */
   rd_kafka_conf_t *rk_conf;

@@ -8,7 +8,7 @@ stdenv.mkDerivation rec {
 
   src = ./.;
 
-  buildInputs = [ rdkafka libyaml ];
+  buildInputs = [ rdkafka libyaml ncurses ];
 
   nativeBuildInputs = [ gcc ];
 
@@ -17,7 +17,7 @@ stdenv.mkDerivation rec {
     gcc main.c \
       connect.c config.c kafka.c util.c \
       -o simple_producer \
-      -lyaml -lrdkafka
+      -lyaml -lrdkafka -lncurses
   '';
 
   installPhase = ''

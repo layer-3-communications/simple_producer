@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <sys/uio.h> /* for recvmsg */
 #include <unistd.h>
+#include <curses.h>
 
 #include <librdkafka/rdkafka.h>
 #include <yaml.h>
@@ -25,7 +26,6 @@ static uint64_t PROCESSED = 0;
 static uint64_t SUCCESSFUL = 0;
 static uint64_t FAILED = 0;
 static void stop (int sig);
-static void render_progress();
 
 int main(int argc, char **argv) {
   /* input config yaml file */
@@ -63,7 +63,18 @@ int main(int argc, char **argv) {
   /* install signal handler (handle SIGINT) */
   signal(SIGINT, stop);
 
-  /* call @recv@, then push to kafka */
+  /* initialise curses */
+  WINDOW *w;
+  w = initscr();
+  scrollok(w,1);
+  wsetscrreg(w, 4, LINES-1);
+  //wprintw(w, "%ld\n", "Processed");
+  //wprintw(w, "%ld\n", "Succeeded");
+  //wprintw(w, "%ld\n", "Failed");
+  //wrefresh(w);
+  //wsetcrreg(w, 4, LINES-1);
+
+  /* call @recvfrom@, then push to kafka */
   while (RUNNING) {
     /* kafka response error variable */
     rd_kafka_resp_err_t err;
@@ -125,7 +136,11 @@ int main(int argc, char **argv) {
          * you aren't necessary producing, so that delivery callbacks
          * get served. */
         rd_kafka_poll(rk, 0 /* 0 is non-blocking */);
-        render_progress();
+
+        clear();
+        wprintw(w, "Processed: %ld, Successful: %ld, Failed: %ld", PROCESSED, SUCCESSFUL, FAILED);
+        wrefresh(w);
+        wsetscrreg(w, 4, LINES-1);
     }
   }
 
@@ -150,14 +165,7 @@ static void stop (int sig) {
   RUNNING = false;
   fclose(stdin); /* stop accepting input */
   fprintf(stdout, "Received SIGINT. Shutting down...\n");
-  exit(EXIT_FAILURE);
-}
-
-void render_progress() {
-  int e = system("clear");
-  if (e == -1) {
-    fprintf(stderr, "render_progress: failed to clear screen");
-  } else {
-    fprintf(stdout, "Processed: %ld, Successful: %ld, Failed: %ld", PROCESSED, SUCCESSFUL, FAILED);
-  }
+  /* clean up ncurses */
+  endwin();
+  exit(EXIT_SUCCESS);
 }

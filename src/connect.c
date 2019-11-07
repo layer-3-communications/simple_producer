@@ -51,7 +51,7 @@ socket_t mk_socket(const char *hostname, const char* port) {
     if (fd == -1) {
       continue; /* binding to the socket failed */
     }
-    if (connect(fd, rp->ai_addr, rp->ai_addrlen) != -1) {
+    if (bind(fd, rp->ai_addr, rp->ai_addrlen) != -1) {
       break; /* success */
     }
     close(fd);
