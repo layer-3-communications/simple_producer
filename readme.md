@@ -7,7 +7,9 @@ to kafka. It does not process the messages at all.
 
 ## Building
 
+```
 nix-build
+```
 
 ## Running
 
