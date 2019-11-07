@@ -1,0 +1,7 @@
+err_buf_size: 512
+msg_buf_size: 512
+rcv_buf_size: 65507
+rcv_host: "127.0.0.1"
+rcv_port: 5000
+broker: "127.0.0.1:2181"
+topic: "test-topic-lol"
