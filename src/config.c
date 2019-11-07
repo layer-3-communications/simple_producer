@@ -44,7 +44,7 @@ config_t *load_config(const char *configfile) {
   enum { String, Int } type;
 
   /* which uint16_t field are we on? */
-  enum { ErrBuf, MsgBuf, RcvBuf, RcvPort } field;
+  enum { ErrBuf, RcvBuf } field;
 
   /* the data we just pulled from the stream */
   char **data_str;
@@ -60,24 +60,19 @@ config_t *load_config(const char *configfile) {
       case YAML_KEY_TOKEN: expect = Key; break;
       case YAML_VALUE_TOKEN: expect = Value; break;
       case YAML_SCALAR_TOKEN:
-        tk = token.data.scalar.value;
+        tk = (char *)token.data.scalar.value;
         if (expect == Key) {
           if(!strcmp(tk, "err_buf_size")) {
             type = Int;
             field = ErrBuf;
-          } else if (!strcmp(tk, "msg_buf_size")) {
-            type = Int;
-            field = MsgBuf;
           } else if (!strcmp(tk, "rcv_buf_size")) {
             type = Int;
             field = RcvBuf;
-          } else if (!strcmp(tk, "rcv_host")) {
-            data_str = &config->rcv_host;
+          } else if (!strcmp(tk, "socket_path")) {
             type = String;
-          } else if (!strcmp(tk, "rcv_port")) {
-            type = Int;
-            field = RcvPort;
-          } else if (!strcmp(tk, "broker")) {
+            data_str = &config->socket_path;
+          }
+          else if (!strcmp(tk, "broker")) {
             data_str = &config->broker;
             type = String;
           } else if (!strcmp(tk, "topic")) {
@@ -93,12 +88,8 @@ config_t *load_config(const char *configfile) {
             int i = from_str(tk);
             if (field == ErrBuf) {
               config->err_buf_size = i;
-            } else if (field == MsgBuf) {
-              config->msg_buf_size = i;
             } else if (field == RcvBuf) {
               config->rcv_buf_size = i;
-            } else if (field == RcvPort) {
-              config->rcv_port = i;
             } else {
               puts ("Unknown field.\n");
             }
@@ -122,11 +113,7 @@ config_t *load_config(const char *configfile) {
 }
 
 void free_config(config_t* config) {
-  //free(config->err_buf_size);
-  //free(config->msg_buf_size);
-  //free(config->rcv_buf_size);
-  //free(config->rcv_port);
-  free(config->rcv_host);
+  free(config->socket_path);
   free(config->broker);
   free(config->topic);
 }
@@ -139,16 +126,10 @@ void exit_field(char *field) {
 void valid_config(config_t* config) {
   if (config->err_buf_size == 0) {
     exit_field("err_buf_size");
-  } else if (config->msg_buf_size == 0) {
-    exit_field("msg_buf_size");
   } else if (config->rcv_buf_size == 0) {
     exit_field("rcv_buf_size");
-  } else if (config->rcv_host == NULL) {
-    fprintf(stdout,"Hostname not defined in config. Defaulting to 127.0.0.1.\n");
-    char *localhost = "127.0.0.1";
-    config->rcv_host = localhost;
-  } else if (config->rcv_port == 0) {
-    exit_field("rcv_port");
+  } else if (config->socket_path == NULL) {
+    exit_field("socket_path");
   } else if (config->broker == NULL) {
     fprintf(stdout,"Broker not defined in config. Defaulting to 127.0.0.1:9092.\n");
     char *broker = "127.0.0.1:9092";
@@ -160,10 +141,8 @@ void valid_config(config_t* config) {
   fprintf(stdout, "\n");
   fprintf(stdout, "Your configuration is: \n");
   fprintf(stdout, "    err_buf_size: %d\n", config->err_buf_size);
-  fprintf(stdout, "    msg_buf_size: %d\n", config->msg_buf_size);
   fprintf(stdout, "    rcv_buf_size: %d\n", config->rcv_buf_size);
-  fprintf(stdout, "    rcv_host:     %s\n", config->rcv_host);
-  fprintf(stdout, "    rcv_port:     %d\n", config->rcv_port);
+  fprintf(stdout, "    socket_path:  %s\n", config->socket_path);
   fprintf(stdout, "    broker:       %s\n", config->broker);
   fprintf(stdout, "    topic:        %s\n", config->topic);
   fprintf(stdout, "\n");

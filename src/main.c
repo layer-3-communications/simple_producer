@@ -47,14 +47,13 @@ int main(int argc, char **argv) {
   valid_config(config);
 
   /** set local options **/
-  /* message value temporrary buffer */
-  char msg_buffer[config->msg_buf_size];
   /* udp recv buffer */
+  /* kafka reads messages off of this */
   char rcv_buffer[config->rcv_buf_size];
 
   /* open udp socket for recv */
-  fprintf(stdout, "Opening UDP socket on %s:%d...\n", config->rcv_host, config->rcv_port);
-  int fd = mk_socket(config->rcv_host, itoa(config->rcv_port));
+  fprintf(stdout, "Opening Unix Domain socket...\n");
+  int fd = mk_socket(config->socket_path);
 
   /* connect to kafka */
   fprintf(stdout, "Establishing TCP connection to Kafka at %s...\n", config->broker);
