@@ -2,7 +2,7 @@
 
 with pkgs;
 
-stdenv.mkDerivation {
+stdenv.mkDerivation rec {
   pname = "simple_producer";
   version = "1.0";
 
@@ -13,6 +13,7 @@ stdenv.mkDerivation {
   nativeBuildInputs = [ gcc ];
 
   buildPhase = ''
+    cd src/
     gcc main.c \
       connect.c config.c kafka.c util.c \
       -o simple_producer \
