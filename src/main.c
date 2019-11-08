@@ -25,6 +25,7 @@ static bool RUNNING = true;
 static uint64_t PROCESSED = 0;
 static uint64_t SUCCESSFUL = 0;
 static uint64_t FAILED = 0;
+static uint64_t DROPPED = 0;
 static void stop (int sig);
 
 int main(int argc, char **argv) {
@@ -86,6 +87,7 @@ int main(int argc, char **argv) {
       exit(EXIT_FAILURE);
     } else if (count == sizeof(rcv_buffer)) {
       fprintf(stderr, "WARNING: Received a datagram that was too large for our buffer. The message has been discarded.\nThe message had size: %ld bytes.\n", count);
+      DROPPED += 1;
     } else {
 
       /* send a produce request */
@@ -125,7 +127,7 @@ int main(int argc, char **argv) {
             FAILED += 1;
           }
         } else {
-          fprintf(stdout, "%% Enqueued message (%zd bytes) for topic %s\n", count, config->topic);
+          wprintw(w,"%% Enqueued message (%zd bytes) for topic %s\n", count, config->topic);
           PROCESSED += 1;
           SUCCESSFUL += 1;
         }
@@ -137,20 +139,20 @@ int main(int argc, char **argv) {
         rd_kafka_poll(rk, 0 /* 0 is non-blocking */);
 
         clear();
-        wprintw(w, "Processed: %ld, Successful: %ld, Failed: %ld", PROCESSED, SUCCESSFUL, FAILED);
+        wprintw(w, "Processed: %ld, Successful: %ld, Failed: %ld Dropped: %ld", PROCESSED, SUCCESSFUL, FAILED, DROPPED);
         wrefresh(w);
         wsetscrreg(w, 4, LINES-1);
     }
   }
 
   /* flush all messages, getting a confirmed failure or success*/
-  fprintf(stdout, "%% Flushing final messages...\n");
+  wprintw(w, "%% Flushing final messages...\n");
   rd_kafka_flush (rk, 10*1000 /* wait for max 10 seconds */);
 
   /* if the output queue is _still_ not empty, there's probably
    * an issue. note it. */
   if (rd_kafka_outq_len(rk) > 0) {
-    fprintf(stderr, "%% %d message(s) were not delivered\n", rd_kafka_outq_len(rk));
+    wprintw(w, "%% %d message(s) were not delivered\n", rd_kafka_outq_len(rk));
   }
 
   /* clean up the connection to kafka */
