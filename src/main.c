@@ -2,14 +2,13 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <signal.h>
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/uio.h> /* for recvmsg */
 #include <unistd.h>
-#include <curses.h>
 
 #include <librdkafka/rdkafka.h>
 #include <yaml.h>
@@ -17,15 +16,20 @@
 #include "config.h"
 #include "connect.h"
 #include "kafka.h"
+#include "logging.h"
 #include "types.h"
 #include "util.h"
 
-// Is the application running?
+/* Is the application running? */
 static bool RUNNING = true;
-static uint64_t PROCESSED = 0;
-static uint64_t SUCCESSFUL = 0;
-static uint64_t FAILED = 0;
-static uint64_t DROPPED = 0;
+
+/* define and initialise our logging constants */
+uint64_t PROCESSED = 0;
+uint64_t SUCCEEDED = 0;
+uint64_t FAILED    = 0;
+uint64_t DROPPED   = 0;
+
+/* declare signal handler */
 static void stop (int sig);
 
 int main(int argc, char **argv) {
@@ -63,17 +67,6 @@ int main(int argc, char **argv) {
   /* install signal handler (handle SIGINT) */
   signal(SIGINT, stop);
 
-  /* initialise curses */
-  WINDOW *w;
-  w = initscr();
-  scrollok(w,1);
-  wsetscrreg(w, 4, LINES-1);
-  //wprintw(w, "%ld\n", "Processed");
-  //wprintw(w, "%ld\n", "Succeeded");
-  //wprintw(w, "%ld\n", "Failed");
-  //wrefresh(w);
-  //wsetcrreg(w, 4, LINES-1);
-
   /* call @recvfrom@, then push to kafka */
   while (RUNNING) {
     /* kafka response error variable */
@@ -87,9 +80,9 @@ int main(int argc, char **argv) {
       exit(EXIT_FAILURE);
     } else if (count == sizeof(rcv_buffer)) {
       fprintf(stderr, "WARNING: Received a datagram that was too large for our buffer. The message has been discarded.\nThe message had size: %ld bytes.\n", count);
+      PROCESSED += 1;
       DROPPED += 1;
     } else {
-
       /* send a produce request */
       retry:
         err = rd_kafka_producev(
@@ -108,6 +101,7 @@ int main(int argc, char **argv) {
           RD_KAFKA_V_END
           );
         if (err) {
+          fprintf(stderr, "Failed lol lol");
           /* failed to enqueue message */
           fprintf(stderr, "%% Failed to produce to topic %s: %s\n", config->topic, rd_kafka_err2str(err));
 
@@ -122,14 +116,7 @@ int main(int argc, char **argv) {
              * property queue.buffering.max.messages */
             rd_kafka_poll(rk, 1000 /* block for max 1000ms */);
             goto retry;
-          } else {
-            PROCESSED += 1;
-            FAILED += 1;
           }
-        } else {
-          wprintw(w,"%% Enqueued message (%zd bytes) for topic %s\n", count, config->topic);
-          PROCESSED += 1;
-          SUCCESSFUL += 1;
         }
 
         /* continually serve the delivery report queue by calling
@@ -138,21 +125,18 @@ int main(int argc, char **argv) {
          * get served. */
         rd_kafka_poll(rk, 0 /* 0 is non-blocking */);
 
-        clear();
-        wprintw(w, "Processed: %ld, Successful: %ld, Failed: %ld Dropped: %ld", PROCESSED, SUCCESSFUL, FAILED, DROPPED);
-        wrefresh(w);
-        wsetscrreg(w, 4, LINES-1);
+        fprintf(stdout, "Processed: %ld, Succeeded: %ld, Failed: %ld Dropped: %ld\n", PROCESSED, SUCCEEDED, FAILED, DROPPED);
     }
   }
 
   /* flush all messages, getting a confirmed failure or success*/
-  wprintw(w, "%% Flushing final messages...\n");
+  fprintf(stdout, "%% Flushing final messages...\n");
   rd_kafka_flush (rk, 10*1000 /* wait for max 10 seconds */);
 
   /* if the output queue is _still_ not empty, there's probably
    * an issue. note it. */
   if (rd_kafka_outq_len(rk) > 0) {
-    wprintw(w, "%% %d message(s) were not delivered\n", rd_kafka_outq_len(rk));
+    fprintf(stderr, "%% %d message(s) were not delivered\n", rd_kafka_outq_len(rk));
   }
 
   /* clean up the connection to kafka */
@@ -166,7 +150,5 @@ static void stop (int sig) {
   RUNNING = false;
   fclose(stdin); /* stop accepting input */
   fprintf(stdout, "Received SIGINT. Shutting down...\n");
-  /* clean up ncurses */
-  endwin();
   exit(EXIT_SUCCESS);
 }

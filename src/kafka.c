@@ -3,6 +3,7 @@
 #include <librdkafka/rdkafka.h>
 
 #include "kafka.h"
+#include "logging.h"
 
 /* message delivery report callback.
  * called exactly once per message. just tells us if
@@ -11,8 +12,12 @@
 void callback(rd_kafka_t *rk, const rd_kafka_message_t *rkmessage, void *opaque) {
   if (rkmessage->err) {
     fprintf(stderr, "%% Message delivery failed: %s\n", rd_kafka_err2str(rkmessage->err));
+    PROCESSED += 1;
+    FAILED += 1;
   } else {
     fprintf(stdout, "%% Message delivered (%zd bytes, partition %"PRId32")\n", rkmessage->len, rkmessage->partition);
+    PROCESSED += 1;
+    SUCCEEDED += 1;
   }
 }
 
@@ -41,7 +46,7 @@ rd_kafka_t *init_kafka(char *broker, uint16_t err_buf_size) {
   rd_kafka_conf_set_dr_msg_cb(rk_conf,callback);
 
   /* create producer instance */
-  /* NOTE: rd_kafka_new takes ownership of the conj object,
+  /* NOTE: rd_kafka_new takes ownership of the conf object,
    * meaning the application should not reference it again
    * after this call. */
   rk = rd_kafka_new(RD_KAFKA_PRODUCER, rk_conf, errstr, sizeof(errstr));
