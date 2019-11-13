@@ -129,11 +129,11 @@ void valid_config(config_t* config) {
   } else if (config->rcv_buf_size == 0) {
     exit_field("rcv_buf_size");
   } else if (config->socket_path == NULL) {
-    exit_field("socket_path");
+    fprintf(stdout,"Broker not defined in config. Defaulting to 'sp_sock'.\n");
+    config->socket_path = "sp_sock";
   } else if (config->broker == NULL) {
     fprintf(stdout,"Broker not defined in config. Defaulting to 127.0.0.1:9092.\n");
-    char *broker = "127.0.0.1:9092";
-    config->broker = broker;
+    config->broker = "127.0.0.1:9092";
   } else if (config->topic == NULL) {
     exit_field("topic");
   }

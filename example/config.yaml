@@ -2,4 +2,5 @@ err_buf_size: 512
 rcv_buf_size: 65507
 broker: "127.0.0.1:2181"
 topic: "test-topic-lol"
-socket_path: "my_socket_path"
+# if this isn't present, defaults to "sp_sock"
+#socket_path: "my_socket_path"

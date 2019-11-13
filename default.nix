@@ -26,4 +26,10 @@ stdenv.mkDerivation rec {
     mkdir -p $out/bin
     cp simple_producer $out/bin
   '';
+
+  shellHook = ''
+    function test() {
+      nc -Uu sp_sock
+    }
+  '';
 }
